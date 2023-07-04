@@ -18,6 +18,7 @@ class SamPredictor:
     def __init__(
         self,
         sam_model: Sam,
+        device = 'cpu'
     ) -> None:
         """
         Uses SAM to calculate the image embedding for an image, and then
@@ -27,7 +28,8 @@ class SamPredictor:
           sam_model (Sam): The model to use for mask prediction.
         """
         super().__init__()
-        self.model = sam_model
+        self.model = sam_model.to(device)
+        self.model.image_encoder = self.model.image_encoder.to(device)
         self.transform = ResizeLongestSide(sam_model.image_encoder.img_size)
         self.reset_image()
 
@@ -86,7 +88,7 @@ class SamPredictor:
         self.original_size = original_image_size
         self.input_size = tuple(transformed_image.shape[-2:])
         input_image = self.model.preprocess(transformed_image)
-        self.features = self.model.image_encoder(input_image)
+        self.features = self.model.image_encoder(input_image.to(self.device))
         self.is_image_set = True
 
     def predict(
@@ -214,7 +216,7 @@ class SamPredictor:
             raise RuntimeError("An image must be set with .set_image(...) before mask prediction.")
 
         if point_coords is not None:
-            points = (point_coords, point_labels)
+            points = (point_coords.to(self.device), point_labels.to(self.device))
         else:
             points = None
 
